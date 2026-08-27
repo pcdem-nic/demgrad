@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newton International College - Graduation Status & Internship Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Tailwind Configuration for Elegant Maroon theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        maroon: {
+                            50: '#fdf2f4',
+                            100: '#f8e1e7',
+                            200: '#eed0d8',
+                            300: '#dda4b3',
+                            400: '#c46b82',
+                            500: '#9f2a44',
+                            600: '#800020',
+                            700: '#670016',
+                            800: '#54091a',
+                            900: '#3f0613',
+                            950: '#28020a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- PapaParse CSV Parser for Google Sheets CSV integration -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- React 18 & Babel Standalone v7 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .bg-maroon-gradient {
+            background: linear-gradient(135deg, #800020 0%, #a81c3b 100%);
+        }
+        .bg-maroon-soft {
+            background: linear-gradient(135deg, #fdf2f4 0%, #f8e1e7 100%);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dda4b3;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #800020;
+        }
+        @media print {
+    /* Hide non-printable UI elements */
+    header, footer, button, .no-print {
+        display: none !important;
+    }
+    
+    /* Ensure background colors and status badges render when printing */
+    body {
+        background-color: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Expand the main content to full width */
+    main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .shadow-md, .shadow-xl, .shadow-sm {
+        box-shadow: none !important;
+    }
+}
+
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        
+        // Default Google Sheet & App Settings
+        const DEFAULT_CONFIG = {
+            spreadsheetId: '1qQ7-p9Z_XTNERZiYtRABavZdngRSRhzPXdQmh_RI35E',
+            sheetStudents: 'Students',
+            sheetSubjects: 'Academic Subjects',
+            sheetInternships: 'Internship Documents',
+            completionRule: 'APPROVED', // 'SUBMITTED' or 'APPROVED'
+            useMockData: false, // Defaults to realistic interactive mock data for instant playability
+            customStudentUrl: '',
+            customSubjectUrl: '',
+            customInternshipUrl: '',
+            formLogbook: 'https://forms.google.com',
+            formReport: 'https://forms.google.com',
+            formSlides: 'https://forms.google.com',
+            formVideo: 'https://forms.google.com'
+        };
+
+        // Realistic Mock Dataset
+        const MOCK_DATA = {
+            students: [
+                {
+                    studentId: 'STU1001',
+                    studentName: 'John Doe',
+                    programme: 'Bachelor of Business Administration',
+                    graduationStatus: 'Pending'
+                },
+                {
+                    studentId: 'STU1002',
+                    studentName: 'Jane Smith',
+                    programme: 'Bachelor of Computer Science (Hons)',
+                    graduationStatus: 'Pending'
+                },
+                {
+                    studentId: 'STU1003',
+                    studentName: 'Ahmad Daniel',
+                    programme: 'Diploma in Information Technology',
+                    graduationStatus: 'Pending'
+                },
+                {
+                    studentId: 'STU1004',
+                    studentName: 'Emily Tan',
+                    programme: 'Bachelor of Accounting & Finance',
+                    graduationStatus: 'Pending'
+                }
+            ],
+            subjects: [
+                // STU1001 (1 pending subject)
+                {
+                    studentId: 'STU1001',
+                    subjectCode: 'CS201',
+                    subjectName: 'Data Structures & Algorithms',
+                    semester: 'Semester 3',
+                    status: 'Pending',
+                    actionLink: 'https://portal.newton.edu.my/course/cs201'
+                },
+                {
+                    studentId: 'STU1001',
+                    subjectCode: 'MA202',
+                    subjectName: 'Mathematics II',
+                    semester: 'Semester 3',
+                    status: 'Completed',
+                    actionLink: ''
+                },
+                {
+                    studentId: 'STU1001',
+                    subjectCode: 'MGT301',
+                    subjectName: 'Strategic Management',
+                    semester: 'Semester 4',
+                    status: 'Completed',
+                    actionLink: 'https://portal.newton.edu.my/course/mgt301'
+                },
+
+                // STU1002 (0 pending subjects, all internships approved = Fully Eligible)
+                {
+                    studentId: 'STU1002',
+                    subjectCode: 'CS304',
+                    subjectName: 'Software Engineering',
+                    semester: 'Semester 5',
+                    status: 'Completed',
+                    actionLink: ''
+                },
+                {
+                    studentId: 'STU1002',
+                    subjectCode: 'CS309',
+                    subjectName: 'Cloud Computing Project',
+                    semester: 'Semester 6',
+                    status: 'Completed',
+                    actionLink: ''
+                },
+
+                // STU1003 (2 pending subjects)
+                {
+                    studentId: 'STU1003',
+                    subjectCode: 'IT105',
+                    subjectName: 'Web Development Basics',
+                    semester: 'Semester 2',
+                    status: 'Incomplete',
+                    actionLink: 'https://portal.newton.edu.my/course/it105'
+                },
+                {
+                    studentId: 'STU1003',
+                    subjectCode: 'IT201',
+                    subjectName: 'Database Systems',
+                    semester: 'Semester 3',
+                    status: 'Failed',
+                    actionLink: 'https://portal.newton.edu.my/course/it201-retake'
+                },
+
+                // STU1004 (Completed subjects, pending internship approvals)
+                {
+                    studentId: 'STU1004',
+                    subjectCode: 'ACC301',
+                    subjectName: 'Advanced Financial Accounting',
+                    semester: 'Semester 6',
+                    status: 'Completed',
+                    actionLink: ''
+                }
+            ],
+            internships: [
+                // STU1001
+                {
+                    studentId: 'STU1001',
+                    documentType: 'Internship Logbook',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-08-10',
+                    fileLink: 'https://drive.google.com/file/d/demo-logbook-1001/view'
+                },
+                {
+                    studentId: 'STU1001',
+                    documentType: 'Internship Report',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-08-12',
+                    fileLink: 'https://drive.google.com/file/d/demo-report-1001/view'
+                },
+                {
+                    studentId: 'STU1001',
+                    documentType: 'Presentation Slides',
+                    submissionStatus: 'Not Submitted',
+                    verificationStatus: '—',
+                    submissionDate: '—',
+                    fileLink: ''
+                },
+                {
+                    studentId: 'STU1001',
+                    documentType: 'Video Presentation',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Pending Review',
+                    submissionDate: '2026-08-15',
+                    fileLink: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+                },
+
+                // STU1002 (All 4 approved)
+                {
+                    studentId: 'STU1002',
+                    documentType: 'Internship Logbook',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-07-28',
+                    fileLink: 'https://drive.google.com/file/d/demo-logbook-1002/view'
+                },
+                {
+                    studentId: 'STU1002',
+                    documentType: 'Internship Report',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-08-01',
+                    fileLink: 'https://drive.google.com/file/d/demo-report-1002/view'
+                },
+                {
+                    studentId: 'STU1002',
+                    documentType: 'Presentation Slides',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-08-05',
+                    fileLink: 'https://drive.google.com/file/d/demo-slides-1002/view'
+                },
+                {
+                    studentId: 'STU1002',
+                    documentType: 'Video Presentation',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-08-06',
+                    fileLink: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+                },
+
+                // STU1003
+                {
+                    studentId: 'STU1003',
+                    documentType: 'Internship Logbook',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Revision Required',
+                    submissionDate: '2026-08-02',
+                    fileLink: 'https://drive.google.com/file/d/demo-logbook-1003/view'
+                },
+                {
+                    studentId: 'STU1003',
+                    documentType: 'Internship Report',
+                    submissionStatus: 'Not Submitted',
+                    verificationStatus: '—',
+                    submissionDate: '—',
+                    fileLink: ''
+                },
+                {
+                    studentId: 'STU1003',
+                    documentType: 'Presentation Slides',
+                    submissionStatus: 'Not Submitted',
+                    verificationStatus: '—',
+                    submissionDate: '—',
+                    fileLink: ''
+                },
+                {
+                    studentId: 'STU1003',
+                    documentType: 'Video Presentation',
+                    submissionStatus: 'Not Submitted',
+                    verificationStatus: '—',
+                    submissionDate: '—',
+                    fileLink: ''
+                },
+
+                // STU1004 (Submitted all, but 2 pending review)
+                {
+                    studentId: 'STU1004',
+                    documentType: 'Internship Logbook',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-08-18',
+                    fileLink: 'https://drive.google.com/file/d/demo-logbook-1004/view'
+                },
+                {
+                    studentId: 'STU1004',
+                    documentType: 'Internship Report',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Approved',
+                    submissionDate: '2026-08-19',
+                    fileLink: 'https://drive.google.com/file/d/demo-report-1004/view'
+                },
+                {
+                    studentId: 'STU1004',
+                    documentType: 'Presentation Slides',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Pending Review',
+                    submissionDate: '2026-08-20',
+                    fileLink: 'https://drive.google.com/file/d/demo-slides-1004/view'
+                },
+                {
+                    studentId: 'STU1004',
+                    documentType: 'Video Presentation',
+                    submissionStatus: 'Submitted',
+                    verificationStatus: 'Pending Review',
+                    submissionDate: '2026-08-21',
+                    fileLink: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+                }
+            ]
+        };
+
+        function App() {
+            const [searchId, setSearchId] = useState('');
+            const [activeStudentId, setActiveStudentId] = useState(null);
+            const [activeTab, setActiveTab] = useState('graduation'); // 'graduation', 'subjects', 'internship'
+            
+            // App settings state
+            const [config, setConfig] = useState(() => {
+                const saved = localStorage.getItem('nic_portal_config');
+                return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
+            });
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+            // Loaded Data States
+            const [loading, setLoading] = useState(false);
+            const [errorMsg, setErrorMsg] = useState('');
+            const [lastRefreshed, setLastRefreshed] = useState(null);
+
+            // Data stores
+            const [studentsData, setStudentsData] = useState([]);
+            const [subjectsData, setSubjectsData] = useState([]);
+            const [internshipsData, setInternshipsData] = useState([]);
+
+            // Mobile menu state
+            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+            // Save configuration update
+            const saveConfig = (newConfig) => {
+                setConfig(newConfig);
+                localStorage.setItem('nic_portal_config', JSON.stringify(newConfig));
+            };
+
+            const buildCsvUrl = (sheetName, customUrl) => {
+                if (customUrl && customUrl.trim() !== '') return customUrl.trim();
+                return `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+            };
+
+            const fetchSheetCsv = (url) => {
+                return new Promise((resolve, reject) => {
+                    Papa.parse(url, {
+                        download: true,
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            // Standardize column key naming
+                            const cleaned = results.data.map(row => {
+                                const newRow = {};
+                                Object.keys(row).forEach(key => {
+                                    const cleanKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    newRow[cleanKey] = row[key] ? row[key].trim() : '';
+                                });
+                                return newRow;
+                            });
+                            resolve(cleaned);
+                        },
+                        error: (err) => reject(err)
+                    });
+                });
+            };
+
+            const loadPortalData = async () => {
+                setLoading(true);
+                setErrorMsg('');
+
+                if (config.useMockData) {
+                    setTimeout(() => {
+                        setStudentsData(MOCK_DATA.students);
+                        setSubjectsData(MOCK_DATA.subjects);
+                        setInternshipsData(MOCK_DATA.internships);
+                        setLastRefreshed(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+                        setLoading(false);
+                    }, 400);
+                    return;
+                }
+
+                try {
+                    const studentUrl = buildCsvUrl(config.sheetStudents, config.customStudentUrl);
+                    const subjectUrl = buildCsvUrl(config.sheetSubjects, config.customSubjectUrl);
+                    const internshipUrl = buildCsvUrl(config.sheetInternships, config.customInternshipUrl);
+
+                    const [rawStudents, rawSubjects, rawInternships] = await Promise.all([
+                        fetchSheetCsv(studentUrl),
+                        fetchSheetCsv(subjectUrl),
+                        fetchSheetCsv(internshipUrl)
+                    ]);
+
+                    // Map students
+                    const mappedStudents = rawStudents.map(r => ({
+                        studentId: r.studentid || r.id || '',
+                        studentName: r.studentname || r.name || '',
+                        programme: r.programme || r.program || '',
+                        graduationStatus: r.graduationstatus || ''
+                    })).filter(s => s.studentId);
+
+                    // Map subjects
+                    const mappedSubjects = rawSubjects.map(r => ({
+                        studentId: r.studentid || r.id || '',
+                        subjectCode: r.subjectcode || r.code || '',
+                        subjectName: r.subjectname || r.name || '',
+                        semester: r.semester || '',
+                        status: r.status || 'Pending',
+                        actionLink: r.actionlink || r.link || r.url || ''
+                    })).filter(s => s.studentId);
+
+                    // Map internships
+                    const mappedInternships = rawInternships.map(r => ({
+                        studentId: r.studentid || r.id || '',
+                        documentType: r.documenttype || r.type || '',
+                        submissionStatus: r.submissionstatus || r.submitted || '',
+                        verificationStatus: r.verificationstatus || r.verification || '',
+                        submissionDate: r.submissiondate || r.date || '',
+                        fileLink: r.filelink || r.link || r.file || r.url || ''
+                    })).filter(i => i.studentId);
+
+                    setStudentsData(mappedStudents);
+                    setSubjectsData(mappedSubjects);
+                    setInternshipsData(mappedInternships);
+                    setLastRefreshed(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+                } catch (err) {
+                    console.error("Google Sheet Fetch Error:", err);
+                    setErrorMsg("Unable to retrieve information from Google Sheets. Please check your internet connection or Spreadsheet ID configuration.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Initial load
+            useEffect(() => {
+                loadPortalData();
+            }, [config.useMockData, config.spreadsheetId]);
+
+            // Active Student Data Filtering
+            const currentStudent = useMemo(() => {
+                if (!activeStudentId) return null;
+                return studentsData.find(s => s.studentId.trim().toUpperCase() === activeStudentId.trim().toUpperCase());
+            }, [studentsData, activeStudentId]);
+
+            const studentSubjects = useMemo(() => {
+                if (!activeStudentId) return [];
+                return subjectsData.filter(s => s.studentId.trim().toUpperCase() === activeStudentId.trim().toUpperCase());
+            }, [subjectsData, activeStudentId]);
+
+            const studentPendingSubjects = useMemo(() => {
+                return studentSubjects.filter(s => {
+                    const st = (s.status || '').toLowerCase();
+                    return st === 'pending' || st === 'incomplete' || st === 'failed';
+                });
+            }, [studentSubjects]);
+
+            const studentInternships = useMemo(() => {
+                if (!activeStudentId) return [];
+                return internshipsData.filter(i => i.studentId.trim().toUpperCase() === activeStudentId.trim().toUpperCase());
+            }, [internshipsData, activeStudentId]);
+
+            const requiredDocs = ['Internship Logbook', 'Internship Report', 'Presentation Slides', 'Video Presentation'];
+
+            const internshipDocStatusMap = useMemo(() => {
+                const map = {};
+                requiredDocs.forEach(docType => {
+                    const record = studentInternships.find(i => 
+                        (i.documentType || '').toLowerCase().includes(docType.toLowerCase()) ||
+                        docType.toLowerCase().includes((i.documentType || '').toLowerCase())
+                    );
+                    
+                    if (record) {
+                        const subStatus = (record.submissionStatus || '').trim();
+                        const verStatus = (record.verificationStatus || '').trim();
+                        
+                        let isComplete = false;
+                        if (config.completionRule === 'SUBMITTED') {
+                            isComplete = subStatus.toLowerCase() === 'submitted';
+                        } else {
+                            // APPROVED rule
+                            isComplete = verStatus.toLowerCase() === 'approved';
+                        }
+
+                        map[docType] = {
+                            found: true,
+                            record,
+                            submissionStatus: subStatus || 'Not Submitted',
+                            verificationStatus: verStatus || '—',
+                            submissionDate: record.submissionDate || '—',
+                            fileLink: record.fileLink || '',
+                            isComplete
+                        };
+                    } else {
+                        map[docType] = {
+                            found: false,
+                            record: null,
+                            submissionStatus: 'Not Submitted',
+                            verificationStatus: '—',
+                            submissionDate: '—',
+                            fileLink: '',
+                            isComplete: false
+                        };
+                    }
+                });
+                return map;
+            }, [studentInternships, config.completionRule]);
+
+            const completedInternshipCount = useMemo(() => {
+                return requiredDocs.reduce((count, docType) => {
+                    return count + (internshipDocStatusMap[docType] && internshipDocStatusMap[docType].isComplete ? 1 : 0);
+                }, 0);
+            }, [internshipDocStatusMap]);
+
+            // Overall Eligibility Calculation
+            const eligibilityResult = useMemo(() => {
+                if (!currentStudent) return null;
+
+                const pendingSubjectCount = studentPendingSubjects.length;
+                const internshipComplete = completedInternshipCount === 4;
+
+                const isEligible = (pendingSubjectCount === 0) && internshipComplete;
+
+                const reasons = [];
+                if (pendingSubjectCount > 0) {
+                    reasons.push(`${pendingSubjectCount} pending/incomplete academic subject${pendingSubjectCount > 1 ? 's' : ''}`);
+                }
+
+                if (!internshipComplete) {
+                    const missingDocs = requiredDocs.filter(d => !(internshipDocStatusMap[d] && internshipDocStatusMap[d].isComplete));
+                    if (config.completionRule === 'APPROVED') {
+                        reasons.push(`${missingDocs.length} internship document${missingDocs.length > 1 ? 's' : ''} pending approval or submission (${missingDocs.join(', ')})`);
+                    } else {
+                        reasons.push(`${missingDocs.length} internship document${missingDocs.length > 1 ? 's' : ''} not yet submitted (${missingDocs.join(', ')})`);
+                    }
+                }
+
+                return {
+                    isEligible,
+                    reasons,
+                    pendingSubjectCount,
+                    completedInternshipCount
+                };
+            }, [currentStudent, studentPendingSubjects, completedInternshipCount, internshipDocStatusMap, config.completionRule]);
+
+            // Handle Search Submit
+            const handleSearch = (e) => {
+                if (e && e.preventDefault) e.preventDefault();
+                if (!searchId.trim()) return;
+                
+                const cleanId = searchId.trim().toUpperCase();
+                setActiveStudentId(cleanId);
+                setActiveTab('graduation');
+            };
+
+            const handleClearStudent = () => {
+                setActiveStudentId(null);
+                setSearchId('');
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col justify-between bg-slate-50">
+                    {/* Header Bar */}
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-20">
+                                {/* Brand Logo & Name */}
+                                <div className="flex items-center space-x-3 cursor-pointer" onClick={handleClearStudent}>
+                                    <div className="w-12 h-12 rounded-xl bg-maroon-gradient flex items-center justify-center text-white shadow-md shadow-maroon-200">
+                                        <i className="fa-solid fa-graduation-cap text-2xl"></i>
+                                    </div>
+                                    <div>
+                                        <span className="text-xl font-extrabold text-slate-900 tracking-tight block leading-tight">
+                                            NEWTON
+                                        </span>
+                                        <span className="text-xs font-semibold text-maroon-600 tracking-widest uppercase block">
+                                            International College
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Desktop Navigation */}
+                                {activeStudentId && (
+                                    <nav className="hidden md:flex space-x-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                                        <button
+                                            onClick={() => setActiveTab('graduation')}
+                                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 flex items-center space-x-2 ${
+                                                activeTab === 'graduation'
+                                                    ? 'bg-white text-maroon-700 shadow-sm'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                                            }`}
+                                        >
+                                            <i className="fa-solid fa-award"></i>
+                                            <span>Graduation Status</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('subjects')}
+                                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 flex items-center space-x-2 ${
+                                                activeTab === 'subjects'
+                                                    ? 'bg-white text-maroon-700 shadow-sm'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                                            }`}
+                                        >
+                                            <i className="fa-solid fa-book"></i>
+                                            <span>Pending Subjects</span>
+                                            {studentPendingSubjects.length > 0 && (
+                                                <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 rounded-full">
+                                                    {studentPendingSubjects.length}
+                                                </span>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('internship')}
+                                            className={`no-print px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 flex items-center space-x-2 ${
+                                                activeTab === 'internship'
+                                                    ? 'bg-white text-maroon-700 shadow-sm'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                                            }`}
+                                        >
+                                            <i className="fa-solid fa-file-contract"></i>
+                                            <span>Internship Submissions</span>
+                                        </button>
+                                    </nav>
+                                )}
+
+                                {/* Top Right Actions */}
+                                    
+                                <div className="flex items-center space-x-3">
+                                    {activeStudentId && (
+                                        <button
+                                            onClick={handleClearStudent}
+                                            className="hidden sm:inline-flex items-center px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm"
+                                        >
+                                            <i className="fa-solid fa-user-gear mr-2 text-slate-400"></i>
+                                            Change Student ID
+                                        </button>
+                                    )}
+
+                                    <button
+                                        onClick={() => setIsSettingsOpen(true)}
+                                        className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:text-maroon-600 hover:border-maroon-300 bg-white transition shadow-sm"
+                                        title="Portal Data Settings & Rules"
+                                    >
+                                        <i className="fa-solid fa-sliders text-lg"></i>
+                                    </button>
+
+                                    {/* Mobile Menu Button */}
+                                    {activeStudentId && (
+                                        <button
+                                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                            className="md:hidden p-2.5 rounded-xl border border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
+                                        >
+                                            <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'} text-lg`}></i>
+                                        </button>
+                                    )}
+                                        {/* Top Right Actions */}
+<div className="flex items-center space-x-3">
+    {activeStudentId && (
+        <>
+            {/* Print Button */}
+            <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition shadow-sm"
+                title="Print Student Record"
+            >
+                <i className="fa-solid fa-print mr-2 text-slate-500"></i>
+                <span>Print Report</span>
+            </button>
+
+            
+        </>
+    )}
+
+   </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Mobile Drawer */}
+                        {activeStudentId && mobileMenuOpen && (
+                            <div className="md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-2 shadow-lg">
+                                <button
+                                    onClick={() => { setActiveTab('graduation'); setMobileMenuOpen(false); }}
+                                    className={`w-full text-left px-4 py-3 rounded-xl font-semibold flex items-center justify-between ${
+                                        activeTab === 'graduation' ? 'bg-maroon-50 text-maroon-700' : 'text-slate-700 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <span><i className="fa-solid fa-award mr-3 text-maroon-600"></i>Graduation Status</span>
+                                    <i className="fa-solid fa-chevron-right text-xs opacity-40"></i>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveTab('subjects'); setMobileMenuOpen(false); }}
+                                    className={`w-full text-left px-4 py-3 rounded-xl font-semibold flex items-center justify-between ${
+                                        activeTab === 'subjects' ? 'bg-maroon-50 text-maroon-700' : 'text-slate-700 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <span><i className="fa-solid fa-book mr-3 text-maroon-600"></i>Pending Subjects</span>
+                                    {studentPendingSubjects.length > 0 && (
+                                        <span className="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 rounded-full">
+                                            {studentPendingSubjects.length}
+                                        </span>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => { setActiveTab('internship'); setMobileMenuOpen(false); }}
+                                    className={`w-full text-left px-4 py-3 rounded-xl font-semibold flex items-center justify-between ${
+                                        activeTab === 'internship' ? 'bg-maroon-50 text-maroon-700' : 'text-slate-700 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <span><i className="fa-solid fa-file-contract mr-3 text-maroon-600"></i>Internship Submissions</span>
+                                    <i className="fa-solid fa-chevron-right text-xs opacity-40"></i>
+                                </button>
+                                <div className="pt-2 border-t border-slate-100">
+                                    <button
+                                        onClick={() => { handleClearStudent(); setMobileMenuOpen(false); }}
+                                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 rounded-xl flex items-center"
+                                    >
+                                        <i className="fa-solid fa-arrow-right-from-bracket mr-3"></i>
+                                        Change Student ID
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </header>
+
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {}
+                        {/* LANDING PAGE / STUDENT LOOKUP */}
+                        {!activeStudentId ? (
+                            <div className="max-w-2xl mx-auto my-8">
+                                <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-xl border border-slate-200/80 text-center relative overflow-hidden">
+                                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-maroon-100 rounded-full blur-3xl opacity-70"></div>
+                                    <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-maroon-100 rounded-full blur-3xl opacity-70"></div>
+
+                                    <div className="relative z-10">
+                                        <div className="w-20 h-20 bg-maroon-50 text-maroon-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-maroon-100">
+                                            <i className="fa-solid fa-id-card text-3xl"></i>
+                                        </div>
+
+                                        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
+                                            Newton International College
+                                        </h1>
+                                        <p className="text-lg font-semibold text-maroon-600 mb-2">
+                                            Graduation Status & Internship Submission Portal
+                                        </p>
+                                        <p className="text-slate-600 text-sm max-w-md mx-auto mb-8 leading-relaxed">
+                                            Enter your Student ID to check your graduation eligibility, pending academic subjects, and internship submission status.
+                                        </p>
+
+                                        {/* Lookup Form */}
+                                        <form onSubmit={handleSearch} className="space-y-4 max-w-md mx-auto">
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                                    <i className="fa-solid fa-magnifying-glass"></i>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={searchId}
+                                                    onChange={(e) => setSearchId(e.target.value)}
+                                                    placeholder="Enter Student ID (e.g. STU1001)"
+                                                    className="w-full pl-11 pr-4 py-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500 text-slate-900 font-semibold text-base shadow-sm uppercase tracking-wide placeholder:normal-case placeholder:text-slate-400 transition"
+                                                    required
+                                                />
+                                            </div>
+
+                                            <button
+                                                type="submit"
+                                                disabled={loading}
+                                                className="w-full py-4 px-6 bg-maroon-gradient hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-maroon-200 transition duration-200 flex items-center justify-center space-x-2 text-base"
+                                            >
+                                                {loading ? (
+                                                    <span><i className="fa-solid fa-spinner fa-spin mr-2"></i> Loading Sheet Data...</span>
+                                                ) : (
+                                                    <>
+                                                        <span>Check Graduation Status</span>
+                                                        <i className="fa-solid fa-arrow-right ml-1"></i>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </form>
+
+                                        {/* Demo Shortcuts */}
+                                        <div className="mt-8 pt-8 border-t border-slate-100">
+                                            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">
+                                                Try Sample Student IDs
+                                            </p>
+                                            <div className="flex flex-wrap justify-center gap-2">
+                                                {MOCK_DATA.students.map((st) => (
+                                                    <button
+                                                        key={st.studentId}
+                                                        onClick={() => {
+                                                            setSearchId(st.studentId);
+                                                            setActiveStudentId(st.studentId);
+                                                        }}
+                                                        className="px-3.5 py-2 bg-slate-100 hover:bg-maroon-50 hover:text-maroon-700 border border-slate-200 hover:border-maroon-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center space-x-1.5"
+                                                    >
+                                                        <span>{st.studentId}</span>
+                                                        <span className="text-slate-500 font-normal">({st.studentName})</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Data Source Footnote */}
+                                        <div className="mt-6 text-xs text-slate-500 flex items-center justify-center space-x-2">
+                                            <span className={`w-2 h-2 rounded-full ${config.useMockData ? 'bg-amber-400' : 'bg-emerald-500'}`}></span>
+                                            <span>
+                                                Data Source: {config.useMockData ? 'Interactive Dataset' : `Google Sheet Endpoint`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : !currentStudent ? (
+                            /* STUDENT NOT FOUND */
+                            <div className="max-w-xl mx-auto my-12 text-center bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-xl">
+                                <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <i className="fa-solid fa-user-slash text-2xl"></i>
+                                </div>
+                                <h2 className="text-2xl font-bold text-slate-900 mb-2">Student ID Not Found</h2>
+                                <p className="text-slate-600 text-sm mb-6">
+                                    We could not find any active student record matching <span className="font-bold text-slate-800">"{activeStudentId}"</span> in the published database.
+                                </p>
+                                <div className="p-4 bg-slate-50 rounded-xl text-xs text-slate-500 text-left mb-6 space-y-1">
+                                    <p className="font-semibold text-slate-700">Troubleshooting tips:</p>
+                                    <p>• Double check your Student ID format (e.g. STU1001).</p>
+                                    <p>• Ensure your record is updated in the college Google Sheet.</p>
+                                    <p>• Try selecting one of the demo IDs (STU1001, STU1002, STU1003, STU1004).</p>
+                                </div>
+                                <div className="flex gap-3 justify-center">
+                                    <button
+                                        onClick={handleClearStudent}
+                                        className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition"
+                                    >
+                                        Try Another ID
+                                    </button>
+                                    <button
+                                        onClick={() => loadPortalData()}
+                                        className="px-5 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-sm transition"
+                                    >
+                                        Refresh Sheet Data
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            /* MAIN STUDENT DASHBOARD */
+                            <div className="space-y-6">
+                                {/* Student Profile & Status Header */}
+                                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md relative overflow-hidden">
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                        {/* Student Info */}
+                                        <div>
+                                            <div className="flex items-center space-x-2 text-xs font-bold text-maroon-600 uppercase tracking-widest mb-1">
+                                                <span>Newton Student Profile</span>
+                                                <span>•</span>
+                                                <span className="text-slate-400">ID: {currentStudent.studentId}</span>
+                                            </div>
+                                            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                                                {currentStudent.studentName}
+                                            </h1>
+                                            <p className="text-slate-600 font-medium text-sm mt-1 flex items-center">
+                                                <i className="fa-solid fa-graduation-cap text-maroon-600 mr-2"></i>
+                                                {currentStudent.programme}
+                                            </p>
+                                        </div>
+
+                                        {/* Dynamic Graduation Eligibility Status Banner */}
+                                        <div className="flex-1 max-w-xl">
+                                            {eligibilityResult && eligibilityResult.isEligible ? (
+                                                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-start space-x-4 shadow-sm">
+                                                    <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 text-xl shadow-md">
+                                                        🎓
+                                                    </div>
+                                                    <div>
+                                                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 uppercase tracking-wide mb-1">
+                                                            STATUS CONFIRMED
+                                                        </span>
+                                                        <h3 className="text-lg font-bold text-emerald-900">
+                                                            ELIGIBLE FOR GRADUATION
+                                                        </h3>
+                                                        <p className="text-xs text-emerald-700 mt-0.5 leading-relaxed">
+                                                            Congratulations! You have satisfied all academic subject requirements and completed all required internship documents.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start space-x-4 shadow-sm">
+                                                    <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 text-xl shadow-md">
+                                                        ⚠️
+                                                    </div>
+                                                    <div>
+                                                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 uppercase tracking-wide mb-1">
+                                                            ACTION REQUIRED
+                                                        </span>
+                                                        <h3 className="text-lg font-bold text-amber-900">
+                                                            NOT YET ELIGIBLE FOR GRADUATION
+                                                        </h3>
+                                                        <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                                                            You are not yet eligible for graduation because: {' '}
+                                                            <span className="font-semibold">{eligibilityResult && eligibilityResult.reasons ? eligibilityResult.reasons.join('; ') : ''}.</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {}
+                                {/* TAB 1: GRADUATION SUMMARY DASHBOARD */}
+                                {activeTab === 'graduation' && (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Card 1: Academic Requirements */}
+                                            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-maroon-50 text-maroon-600 flex items-center justify-center">
+                                                            <i className="fa-solid fa-book-open text-lg"></i>
+                                                        </div>
+                                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                            Academic Requirement
+                                                        </span>
+                                                    </div>
+
+                                                    <h3 className="text-xl font-bold text-slate-900 mb-1">
+                                                        Academic Subjects
+                                                    </h3>
+
+                                                    {studentPendingSubjects.length === 0 ? (
+                                                        <div className="my-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center space-x-2">
+                                                            <i className="fa-solid fa-circle-check text-emerald-600 text-lg"></i>
+                                                            <span>✓ All Academic Subjects Completed</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="my-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center space-x-2">
+                                                            <i className="fa-solid fa-triangle-exclamation text-amber-600 text-lg"></i>
+                                                            <span>⚠️ {studentPendingSubjects.length} Pending Subject{studentPendingSubjects.length > 1 ? 's' : ''} Remaining</span>
+                                                        </div>
+                                                    )}
+
+                                                    <p className="text-slate-600 text-xs leading-relaxed mb-4">
+                                                        Includes core subjects, electives, and retake requirements. All listed subjects must reach 'Completed' status to satisfy graduation criteria.
+                                                    </p>
+                                                </div>
+
+                                                <button
+                                                    onClick={() => setActiveTab('subjects')}
+                                                    className="no-print w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition flex items-center justify-center space-x-2"
+                                                >
+                                                    <span>View Pending Subjects</span>
+                                                    <i className="fa-solid fa-arrow-right text-xs"></i>
+                                                </button>
+                                            </div>
+
+                                            {/* Card 2: Internship Requirements */}
+                                            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-md flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-maroon-50 text-maroon-600 flex items-center justify-center">
+                                                            <i className="fa-solid fa-file-signature text-lg"></i>
+                                                        </div>
+                                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                            Practical Requirement
+                                                        </span>
+                                                    </div>
+
+                                                    <h3 className="text-xl font-bold text-slate-900 mb-1">
+                                                        Internship Documents
+                                                    </h3>
+
+                                                    <div className="my-3">
+                                                        <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
+                                                            <span>Completion Progress</span>
+                                                            <span className="text-maroon-600">{completedInternshipCount} / 4 Completed</span>
+                                                        </div>
+                                                        {/* Progress Bar */}
+                                                        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
+                                                            <div
+                                                                className="bg-maroon-gradient h-full transition-all duration-500 rounded-full"
+                                                                style={{ width: `${(completedInternshipCount / 4) * 100}%` }}
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Quick document Checklist */}
+                                                    <div className="grid grid-cols-2 gap-2 text-xs mt-4">
+                                                        {requiredDocs.map(doc => {
+                                                            const isDone = internshipDocStatusMap[doc] && internshipDocStatusMap[doc].isComplete;
+                                                            return (
+                                                                <div key={doc} className={`p-2 rounded-xl border flex items-center space-x-2 ${
+                                                                    isDone ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                                                }`}>
+                                                                    <i className={`fa-solid ${isDone ? 'fa-circle-check text-emerald-600' : 'fa-circle-notch text-slate-400'}`}></i>
+                                                                    <span className="font-medium truncate">{doc.replace('Internship ', '')}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={() => setActiveTab('internship')}
+                                                    className="no-print mt-6 w-full py-3 bg-maroon-gradient hover:opacity-95 text-white font-semibold rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-md shadow-maroon-100"
+                                                >
+                                                    <span>View Internship Submissions</span>
+                                                    <i className="fa-solid fa-arrow-right text-xs"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Outstanding Checklist Table Panel */}
+                                        {!(eligibilityResult && eligibilityResult.isEligible) && (
+                                            <div className="bg-white rounded-3xl p-6 border border-amber-200 shadow-md">
+                                                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center text-amber-900">
+                                                    <i className="fa-solid fa-list-check text-amber-500 mr-2.5"></i>
+                                                    Outstanding Graduation Checklist
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {studentPendingSubjects.map(s => (
+                                                        <div key={s.subjectCode} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                            <div>
+                                                                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-md uppercase mr-2">
+                                                                    Academic: {s.status}
+                                                                </span>
+                                                                <span className="font-bold text-slate-900 text-sm">{s.subjectCode} — {s.subjectName}</span>
+                                                                <p className="text-xs text-slate-500 mt-0.5">{s.semester}</p>
+                                                            </div>
+                                                            {s.actionLink ? (
+                                                                <a
+                                                                    href={s.actionLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="px-4 py-2 bg-slate-900 hover:bg-maroon-600 text-white text-xs font-bold rounded-xl transition text-center shrink-0"
+                                                                >
+                                                                    Course Portal <i className="fa-solid fa-arrow-up-right-from-square ml-1.5 text-[10px]"></i>
+                                                                </a>
+                                                            ) : (
+                                                                <span className="text-xs text-slate-400 italic">Link Unavailable</span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+
+                                                    {requiredDocs.filter(doc => !(internshipDocStatusMap[doc] && internshipDocStatusMap[doc].isComplete)).map(doc => {
+                                                        const item = internshipDocStatusMap[doc];
+                                                        return (
+                                                            <div key={doc} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                                <div>
+                                                                    <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded-md uppercase mr-2">
+                                                                        Internship: {(item && item.submissionStatus) || 'Not Submitted'}
+                                                                    </span>
+                                                                    <span className="font-bold text-slate-900 text-sm">{doc}</span>
+                                                                    <p className="text-xs text-slate-500 mt-0.5">
+                                                                        Verification Status: {(item && item.verificationStatus) || '—'}
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => setActiveTab('internship')}
+                                                                    className="px-4 py-2 bg-maroon-600 hover:bg-maroon-700 text-white text-xs font-bold rounded-xl transition text-center shrink-0"
+                                                                >
+                                                                    Submit / Review <i className="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {}
+                                {/* TAB 2: PENDING ACADEMIC SUBJECTS */}
+                                {activeTab === 'subjects' && (
+                                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md space-y-6">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-slate-900">Pending Academic Subjects</h2>
+                                                <p className="text-xs text-slate-500 mt-0.5">
+                                                    Displaying subjects with Pending, Incomplete, or Retake status for Student ID: <strong className="text-slate-700">{activeStudentId}</strong>
+                                                </p>
+                                            </div>
+                                            <span className="px-3.5 py-1.5 rounded-xl bg-maroon-50 text-maroon-700 font-bold text-xs self-start sm:self-auto border border-maroon-100">
+                                                {studentPendingSubjects.length} Outstanding
+                                            </span>
+                                        </div>
+
+                                        {studentPendingSubjects.length === 0 ? (
+                                            <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-100">
+                                                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                                    <i className="fa-solid fa-graduation-cap text-3xl"></i>
+                                                </div>
+                                                <h3 className="text-lg font-bold text-slate-900">No Pending Academic Subjects</h3>
+                                                <p className="text-slate-500 text-xs max-w-sm mx-auto mt-1">
+                                                    You have completed all currently recorded academic requirements in your degree programme.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                {/* Desktop Table */}
+                                                <table className="w-full text-left border-collapse hidden md:table">
+                                                    <thead>
+                                                        <tr className="border-b border-slate-200 text-slate-400 text-xs uppercase tracking-wider">
+                                                            <th className="py-3 px-4 font-semibold">Subject Code</th>
+                                                            <th className="py-3 px-4 font-semibold">Subject Name</th>
+                                                            <th className="py-3 px-4 font-semibold">Semester</th>
+                                                            <th className="py-3 px-4 font-semibold">Status</th>
+                                                            <th className="py-3 px-4 font-semibold text-right">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100 text-sm">
+                                                        {studentPendingSubjects.map((subject) => (
+                                                            <tr key={subject.subjectCode} className="hover:bg-slate-50/80 transition">
+                                                                <td className="py-4 px-4 font-mono font-bold text-maroon-600">
+                                                                    {subject.subjectCode}
+                                                                </td>
+                                                                <td className="py-4 px-4 font-semibold text-slate-900">
+                                                                    {subject.subjectName}
+                                                                </td>
+                                                                <td className="py-4 px-4 text-slate-500">
+                                                                    {subject.semester}
+                                                                </td>
+                                                                <td className="py-4 px-4">
+                                                                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800">
+                                                                        {subject.status}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-4 px-4 text-right">
+                                                                    {subject.actionLink ? (
+                                                                        <a
+                                                                            href={subject.actionLink}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-900 hover:bg-maroon-600 text-white font-semibold rounded-lg text-xs transition"
+                                                                        >
+                                                                            <span>Action Link</span>
+                                                                            <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                                                        </a>
+                                                                    ) : (
+                                                                        <span className="text-xs text-slate-400 italic">Link Unavailable</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+
+                                                {/* Mobile Card View */}
+                                                <div className="space-y-3 md:hidden">
+                                                    {studentPendingSubjects.map((subject) => (
+                                                        <div key={subject.subjectCode} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                                                            <div className="flex justify-between items-start">
+                                                                <span className="font-mono font-bold text-maroon-600 text-sm">{subject.subjectCode}</span>
+                                                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">
+                                                                    {subject.status}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-bold text-slate-900 text-base">{subject.subjectName}</h4>
+                                                                <p className="text-xs text-slate-500">{subject.semester}</p>
+                                                            </div>
+                                                            <div className="pt-2 border-t border-slate-200/60 flex justify-end">
+                                                                {subject.actionLink ? (
+                                                                    <a
+                                                                        href={subject.actionLink}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="no-print px-4 py-2 bg-slate-900 text-white font-semibold rounded-xl text-xs flex items-center space-x-1"
+                                                                    >
+                                                                        <span>Action Link</span>
+                                                                        <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                                                    </a>
+                                                                ) : (
+                                                                    <span className="text-xs text-slate-400 italic">Link Unavailable</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {}
+                                {/* TAB 3: SEPARATE INTERNSHIP SUBMISSIONS PAGE */}
+                                {activeTab === 'internship' && (
+                                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md space-y-6">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-slate-900">Internship Document Submissions</h2>
+                                                <p className="text-xs text-slate-500 mt-0.5">
+                                                    Manage required practical documentation for Student ID: <strong className="text-slate-700">{activeStudentId}</strong>
+                                                </p>
+                                            </div>
+
+                                            {/* Internship Progress Summary Box */}
+                                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-center space-x-4">
+                                                <div className="text-right">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Overall Status</span>
+                                                    <span className="text-sm font-bold text-slate-900">{completedInternshipCount} / 4 Completed</span>
+                                                </div>
+                                                <div className="w-10 h-10 rounded-xl bg-maroon-gradient text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                                                    {Math.round((completedInternshipCount / 4) * 100)}%
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Internship 4 Cards Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                            {requiredDocs.map((docType, index) => {
+                                                const item = internshipDocStatusMap[docType];
+                                                const isSubmitted = item && item.submissionStatus && item.submissionStatus.toLowerCase() === 'submitted';
+                                                const isApproved = item && item.verificationStatus && item.verificationStatus.toLowerCase() === 'approved';
+                                                
+                                                // Dynamic forms config link selection
+                                                let formUrl = config.formLogbook;
+                                                if (docType.includes('Report')) formUrl = config.formReport;
+                                                if (docType.includes('Slides')) formUrl = config.formSlides;
+                                                if (docType.includes('Video')) formUrl = config.formVideo;
+
+                                                return (
+                                                    <div key={docType} className="bg-slate-50/70 hover:bg-slate-50 rounded-2xl p-6 border border-slate-200 transition flex flex-col justify-between">
+                                                        <div>
+                                                            <div className="flex justify-between items-start mb-3">
+                                                                <span className="text-xs font-mono font-extrabold text-maroon-600 bg-maroon-50 px-2.5 py-1 rounded-lg border border-maroon-100">
+                                                                    0{index + 1}
+                                                                </span>
+                                                                <div className="flex flex-wrap gap-1 justify-end">
+                                                                    {isSubmitted ? (
+                                                                        <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-xs font-bold flex items-center">
+                                                                            <i className="fa-solid fa-check mr-1"></i> Submitted
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-md text-xs font-bold flex items-center">
+                                                                            <i className="fa-solid fa-triangle-exclamation mr-1"></i> Not Submitted
+                                                                        </span>
+                                                                    )}
+
+                                                                    <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                                                                        isApproved 
+                                                                            ? 'bg-emerald-600 text-white' 
+                                                                            : (item && item.verificationStatus && item.verificationStatus.toLowerCase().includes('revision'))
+                                                                            ? 'bg-rose-100 text-rose-800'
+                                                                            : 'bg-slate-200 text-slate-700'
+                                                                    }`}>
+                                                                        {(item && item.verificationStatus) || '—'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
+                                                                {docType}
+                                                            </h3>
+
+                                                            <div className="space-y-1.5 text-xs text-slate-600 mb-6 bg-white p-3 rounded-xl border border-slate-100">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Submission Date:</span>
+                                                                    <span className="font-semibold text-slate-700">{(item && item.submissionDate) || '—'}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-400">Verification:</span>
+                                                                    <span className="font-semibold text-slate-700">{(item && item.verificationStatus) || 'Pending'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Dynamic Submission or File Link Action */}
+                                                        <div className="no-print">
+                                                            {isSubmitted && item && item.fileLink ? (
+                                                                <a
+                                                                    href={item.fileLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-2"
+                                                                >
+                                                                    <i className="fa-solid fa-external-link text-xs"></i>
+                                                                    <span>{docType.includes('Video') ? 'Watch Video Link' : 'View Submitted Document'}</span>
+                                                                </a>
+                                                            ) : (
+                                                                <a
+                                                                    href={formUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="w-full py-2.5 px-4 bg-maroon-gradient hover:opacity-95 text-white font-bold rounded-xl text-xs transition flex items-center justify-center space-x-2 shadow-sm"
+                                                                >
+                                                                    <i className="fa-solid fa-cloud-arrow-up"></i>
+                                                                    <span>Submit {docType.replace('Internship ', '')}</span>
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Read-Only Notice Box */}
+                                        <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 text-slate-600 text-xs flex items-center space-x-3">
+                                            <i className="fa-solid fa-shield-halved text-maroon-600 text-xl shrink-0"></i>
+                                            <div>
+                                                <p className="font-semibold text-slate-800">Secure Institutional Submission Portal</p>
+                                                <p className="mt-0.5">
+                                                    Submissions are processed via secure college forms. Verification status is updated on your status dashboard once verified by the Academic & Internship Office.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="bg-white border-t border-slate-200 mt-12 py-6">
+                        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 space-y-2">
+                            <div className="flex justify-center items-center space-x-2 font-bold text-slate-700">
+                                <span>Newton International College</span>
+                                <span>•</span>
+                                <span className="text-maroon-600">Graduation & Academic Affairs Office</span>
+                            </div>
+                            <p>© 2026 Newton International College. All rights reserved.</p>
+                        </div>
+                    </footer>
+
+                    {}
+                    {/* Settings Modal */}
+                    {isSettingsOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto space-y-6">
+                                <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-10 h-10 rounded-xl bg-maroon-50 text-maroon-600 flex items-center justify-center font-bold">
+                                            <i className="fa-solid fa-sliders text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold text-slate-900">Portal Configuration</h3>
+                                            <p className="text-xs text-slate-500">Configure Google Sheets integration & graduation rules</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsSettingsOpen(false)}
+                                        className="text-slate-400 hover:text-slate-600 p-2 rounded-lg"
+                                    >
+                                        <i className="fa-solid fa-xmark text-xl"></i>
+                                    </button>
+                                </div>
+
+                                {/* Dataset Switch: Demo vs Published Google Sheets */}
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                                    <label className="flex items-center justify-between cursor-pointer">
+                                        <div>
+                                            <span className="font-bold text-slate-900 text-sm block">Use Interactive Demo Dataset</span>
+                                            <span className="text-xs text-slate-500 block">Switch to pre-populated sample records for instant testing</span>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={config.useMockData}
+                                            onChange={(e) => saveConfig({ ...config, useMockData: e.target.checked })}
+                                            className="w-5 h-5 text-maroon-600 focus:ring-maroon-500 rounded cursor-pointer"
+                                        />
+                                    </label>
+                                </div>
+
+                                {/* Graduation Eligibility Rule Toggle */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                                        Internship Graduation Completion Rule
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => saveConfig({ ...config, completionRule: 'SUBMITTED' })}
+                                            className={`p-3.5 rounded-xl border text-left text-xs transition ${
+                                                config.completionRule === 'SUBMITTED'
+                                                    ? 'bg-maroon-50 border-maroon-500 text-maroon-900 font-bold'
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className="font-bold text-sm mb-0.5">Option A: Submitted = Complete</div>
+                                            <p className="text-[11px] opacity-80">Document marked complete immediately upon student submission.</p>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => saveConfig({ ...config, completionRule: 'APPROVED' })}
+                                            className={`p-3.5 rounded-xl border text-left text-xs transition ${
+                                                config.completionRule === 'APPROVED'
+                                                    ? 'bg-maroon-50 border-maroon-500 text-maroon-900 font-bold'
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className="font-bold text-sm mb-0.5">Option B: Approved = Complete</div>
+                                            <p className="text-[11px] opacity-80">Requires verification status to be 'Approved' by college staff.</p>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Google Sheets Parameters */}
+                                {!config.useMockData && (
+                                    <div className="space-y-4 pt-2 border-t border-slate-100">
+                                        <h4 className="font-bold text-slate-900 text-sm">Google Sheets Published Endpoint Settings</h4>
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-700 block mb-1">Spreadsheet ID</label>
+                                            <input
+                                                type="text"
+                                                value={config.spreadsheetId}
+                                                onChange={(e) => saveConfig({ ...config, spreadsheetId: e.target.value })}
+                                                placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono"
+                                            />
+                                            <p className="text-[11px] text-slate-400 mt-1">
+                                                Spreadsheet must be published to web via File &gt; Share &gt; Publish to web.
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <div>
+                                                <label className="text-xs font-semibold text-slate-700 block mb-1">Sheet 1 (Students)</label>
+                                                <input
+                                                    type="text"
+                                                    value={config.sheetStudents}
+                                                    onChange={(e) => saveConfig({ ...config, sheetStudents: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-semibold text-slate-700 block mb-1">Sheet 2 (Subjects)</label>
+                                                <input
+                                                    type="text"
+                                                    value={config.sheetSubjects}
+                                                    onChange={(e) => saveConfig({ ...config, sheetSubjects: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-semibold text-slate-700 block mb-1">Sheet 3 (Internship)</label>
+                                                <input
+                                                    type="text"
+                                                    value={config.sheetInternships}
+                                                    onChange={(e) => saveConfig({ ...config, sheetInternships: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Instructions on Publishing Google Sheets */}
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-2">
+                                    <h5 className="font-bold text-slate-800 flex items-center">
+                                        <i className="fa-solid fa-circle-info text-maroon-600 mr-2"></i>
+                                        How to Publish Your Google Sheet
+                                    </h5>
+                                    <ol className="list-decimal list-inside space-y-1 text-slate-600">
+                                        <li>In Google Sheets, go to <strong className="text-slate-800">File &gt; Share &gt; Publish to web</strong>.</li>
+                                        <li>Select <strong className="text-slate-800">Entire Document</strong> or individual sheets and choose <strong className="text-slate-800">Comma-separated values (.csv)</strong>.</li>
+                                        <li>Ensure sheet tab names match Sheet 1: <code className="bg-slate-200 px-1 py-0.5 rounded">Students</code>, Sheet 2: <code className="bg-slate-200 px-1 py-0.5 rounded">Academic Subjects</code>, Sheet 3: <code className="bg-slate-200 px-1 py-0.5 rounded">Internship Documents</code>.</li>
+                                    </ol>
+                                </div>
+
+                                <div className="pt-4 border-t border-slate-100 flex justify-end space-x-3">
+                                    <button
+                                        onClick={() => {
+                                            saveConfig(DEFAULT_CONFIG);
+                                            loadPortalData();
+                                        }}
+                                        className="px-4 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-xs transition"
+                                    >
+                                        Reset Defaults
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsSettingsOpen(false);
+                                            loadPortalData();
+                                        }}
+                                        className="px-5 py-2.5 bg-maroon-gradient hover:opacity-95 text-white font-bold rounded-xl text-xs transition shadow-md"
+                                    >
+                                        Save & Apply Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
